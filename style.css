@@ -227,8 +227,19 @@ tbody tr:last-child td{border-bottom:none;}
 .empty-state .ic{font-size:38px;margin-bottom:10px;}
 
 @media (max-width:760px){
-  #sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(-100%);transition:.2s;}
+  #sidebar{position:fixed;left:0;top:0;bottom:0;z-index:60;transform:translateX(-100%);transition:.2s;box-shadow:0 0 30px rgba(0,0,0,.4);}
   #sidebar.open{transform:translateX(0);}
+  .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:55;}
+  .sidebar-backdrop.show{display:block;}
+  .hamburger{display:inline-flex !important;}
+  #topbar{padding:0 12px;gap:8px;}
+  #topbar h1{font-size:15px;}
+  .searchbox{display:none;}
   .form-grid{grid-template-columns:1fr;}
   .cs-meta{grid-template-columns:1fr 1fr;}
 }
+.hamburger{
+  display:none;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text);
+  padding:6px 8px;border-radius:6px;flex:0 0 auto;
+}
+.hamburger:hover{background:#f0f0f0;}
