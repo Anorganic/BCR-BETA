@@ -101,6 +101,54 @@ web-nya dan login pakai email + password tersebut.
 Klik lingkaran avatar di pojok kanan atas topbar → muncul info nama, role,
 email, dan tombol **Logout**.
 
+## Aplikasi Android (tanpa Android Studio, tanpa Play Store)
+
+Web ini sudah disiapkan sebagai **PWA (Progressive Web App)** — artinya bisa
+"di-install" jadi app dengan icon sendiri di HP, dan kita bisa bungkus jadi
+file `.apk` yang langsung diinstall di HP tim, tanpa proses build Android
+yang rumit dan tanpa upload ke Play Store.
+
+File yang sudah ditambahkan untuk PWA: `manifest.json`, `sw.js` (service
+worker), `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`. Upload
+semua file ini juga ke GitHub seperti file lainnya.
+
+### Opsi A — Install langsung dari browser (paling simpel, tanpa APK)
+
+Setiap anggota tim cukup buka website-nya di Chrome (Android), lalu:
+1. Ketuk menu **⋮** (tiga titik) di pojok kanan atas Chrome
+2. Pilih **"Install app"** atau **"Add to Home screen"**
+3. Icon MAINTENANCE BCR akan muncul di home screen HP, bisa dibuka seperti app biasa (full-screen, tanpa address bar)
+
+Ini sudah cukup untuk kebanyakan kebutuhan, dan **tidak perlu langkah lain
+apapun** — otomatis bisa begitu file PWA di atas sudah online.
+
+### Opsi B — Bikin file APK sungguhan (untuk dibagikan/di-install manual)
+
+Kalau mau benar-benar ada file `.apk` yang bisa dikirim lewat WhatsApp/Drive
+dan diinstall di HP tim:
+
+1. Buka **[www.pwabuilder.com](https://www.pwabuilder.com)**
+2. Masukkan URL web kamu (`https://maintenance-bcr-waskita.vercel.app`) di kotak yang ada
+3. Klik **Start**, tunggu proses analisa (akan mengecek manifest, service worker, icon — semua sudah disiapkan di atas)
+4. Setelah selesai, klik **Package for Stores**
+5. Pilih **Android**
+6. Isi/biarkan default pengaturan yang muncul (Package ID, App name, dll — bisa disesuaikan, misal Package ID: `com.bcr.maintenance`)
+7. Klik **Generate** / **Download**
+8. Akan terdownload file `.apk` (atau `.aab`, untuk sideload pilih yang `.apk`)
+
+### Install APK ke HP tim
+
+1. Kirim file `.apk` itu ke HP tim (lewat WhatsApp, Google Drive, dll)
+2. Di HP Android, buka file `.apk` itu dari Downloads
+3. Kalau muncul peringatan "Install blocked" / "Unknown sources" → ketuk
+   **Settings**, aktifkan izin **"Allow from this source"**, lalu ulangi install
+4. Ketuk **Install** → selesai, icon MAINTENANCE BCR muncul di home screen
+
+> Karena APK ini sebenarnya "membungkus" website yang sama, setiap update
+> yang kamu lakukan di GitHub (lalu Vercel redeploy) **otomatis ikut update**
+> di app Android ini juga — tidak perlu generate ulang APK setiap ada
+> perubahan kecil.
+
 ## Push ke GitHub
 
 ```bash
