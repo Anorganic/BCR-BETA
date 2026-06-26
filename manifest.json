@@ -1,0 +1,16 @@
+{
+  "name": "MAINTENANCE BCR",
+  "short_name": "BCR Maintenance",
+  "description": "Asset & Work Management - MAINTENANCE BCR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#3d1c28",
+  "theme_color": "#3d1c28",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
