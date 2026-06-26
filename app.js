@@ -2,8 +2,22 @@
    MAINTENANCE BCR — front-end prototype (web)
    Mengikuti flow Work Request -> Work Order -> Backlog ->
    Approval -> Checksheet -> Report, sesuai dokumentasi flow.
-   Data disimpan via window.storage (per-user, in-browser).
 ========================================================= */
+
+/* ============================================================
+   KONFIGURASI BACKEND (Supabase)
+   1. Buat project di https://supabase.com
+   2. Jalankan SQL di file setup.sql (Supabase SQL Editor)
+   3. Ambil Project URL & anon public key di Settings > API
+   4. Ganti dua nilai di bawah ini dengan punya kamu
+   Selama belum diganti, web tetap jalan pakai data LOKAL per-browser.
+============================================================ */
+const SUPABASE_URL = "https://ltniknsucbyhflyhbynw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0bmlrbnN1Y2J5aGZseWhieW53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NTI2NTEsImV4cCI6MjA5ODAyODY1MX0.3d0ILa7UN-uUxk36YdjanGSXXhn22iZ43dhO8b_Q9CI";
+const BACKEND_ENABLED = SUPABASE_URL.indexOf("https://") === 0 && SUPABASE_ANON_KEY.length > 20;
+const supabaseClient = (BACKEND_ENABLED && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 const STORE_KEY = "bcr_app_data_v1";
 let DB = null;
@@ -88,18 +102,59 @@ const CHECKLIST_ITEMS = {
   }
 };
 
-/* ---------- storage ---------- */
+/* ---------- storage (Supabase backend, fallback ke local) ---------- */
+function setSyncStatus(mode, text){
+  const el = document.getElementById("syncStatus");
+  if(!el) return;
+  el.className = "sync-status "+mode;
+  el.querySelector(".txt").textContent = text;
+}
 async function loadDB(){
+  if(BACKEND_ENABLED && supabaseClient){
+    try{
+      const { data, error } = await supabaseClient.from("app_data").select("data").eq("id","main").maybeSingle();
+      if(error) throw error;
+      if(data && data.data){ DB = data.data; setSyncStatus("online","Online (server)"); return; }
+      DB = seedData();
+      await saveDB();
+      setSyncStatus("online","Online (server)");
+      return;
+    }catch(e){
+      console.error("Supabase load error:", e);
+      setSyncStatus("offline","Server error — pakai data lokal");
+    }
+  } else {
+    setSyncStatus("local","Mode lokal (belum terhubung backend)");
+  }
+  // fallback: data lokal per-browser
   try{
     const res = await window.storage.get(STORE_KEY, false);
     if(res && res.value){ DB = JSON.parse(res.value); return; }
-  }catch(e){ /* not found */ }
+  }catch(e){ /* belum ada data */ }
   DB = seedData();
   await saveDB();
 }
 async function saveDB(){
+  if(BACKEND_ENABLED && supabaseClient){
+    try{
+      const { error } = await supabaseClient.from("app_data").upsert({id:"main", data: DB, updated_at: new Date().toISOString()});
+      if(error) throw error;
+      setSyncStatus("online","Online (server)");
+      return;
+    }catch(e){
+      console.error("Supabase save error:", e);
+      setSyncStatus("offline","Gagal simpan ke server!");
+      showToast("Gagal menyimpan ke server, cek koneksi internet");
+    }
+  }
   try{ await window.storage.set(STORE_KEY, JSON.stringify(DB), false); }
   catch(e){ console.error("storage error", e); }
+}
+async function refreshFromBackend(){
+  if(!BACKEND_ENABLED){ showToast("Backend belum dikonfigurasi"); return; }
+  await loadDB();
+  render();
+  showToast("Data diperbarui dari server");
 }
 function nextId(prefix, padLen){
   const map = {WR:"wr", WO:"wo", BL:"bl", MR:"mr", SCD:"scd", OPR:"opr", AST:"ast"};
@@ -1116,5 +1171,18 @@ async function init(){
   document.getElementById("modalOverlay").addEventListener("click", (e)=>{
     if(e.target.id==="modalOverlay") closeModal();
   });
+  const btnRefresh = document.getElementById("btnRefresh");
+  if(btnRefresh) btnRefresh.onclick = refreshFromBackend;
+
+  if(BACKEND_ENABLED){
+    // auto-sync ringan tiap 20 detik supaya perubahan dari user lain ikut tampil,
+    // tapi dilewati kalau ada modal yang sedang terbuka (biar tidak ganggu input)
+    setInterval(async ()=>{
+      const overlay = document.getElementById("modalOverlay");
+      if(overlay && overlay.classList.contains("show")) return;
+      await loadDB();
+      render();
+    }, 20000);
+  }
 }
 init();
