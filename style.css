@@ -28,6 +28,28 @@ input,select,textarea{font-family:inherit;}
 
 #app{display:flex;height:100vh;overflow:hidden;}
 
+/* ---------- LOGIN SCREEN ---------- */
+.login-screen{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--sidebar-bg),#1f3a5f);z-index:500;padding:20px;
+}
+.login-card{
+  background:#fff;border-radius:14px;padding:36px 32px;width:100%;max-width:380px;
+  box-shadow:0 24px 60px rgba(0,0,0,.3);text-align:center;
+}
+.login-logo{
+  width:54px;height:54px;border-radius:14px;margin:0 auto 14px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+  display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;
+}
+.login-card h1{font-size:18px;margin:0 0 2px;letter-spacing:.4px;}
+.login-sub{font-size:12px;color:var(--muted);margin:0 0 22px;}
+.login-card .form-row{text-align:left;}
+.login-error{
+  background:#fdecea;color:#b3261e;border-radius:7px;padding:9px 12px;font-size:12.3px;
+  margin-bottom:13px;text-align:left;
+}
+.login-hint{font-size:11.5px;color:var(--muted);margin-top:16px;}
+
 /* ---------- SIDEBAR ---------- */
 #sidebar{
   width:248px;flex:0 0 248px;background:var(--sidebar-bg);color:#f1e7e9;
