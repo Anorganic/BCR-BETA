@@ -23,6 +23,8 @@ const STORE_KEY = "bcr_app_data_v1";
 let DB = null;
 let currentRoute = "dashboard";
 let modalSubmitHandler = null;
+let currentUser = null;
+let currentProfile = null;
 
 /* ---------- seed data ---------- */
 function seedData(){
@@ -1164,10 +1166,71 @@ function exportTableCsv(key){
 /* ========================================================
    INIT
 ======================================================== */
-async function init(){
+/* ========================================================
+   AUTH (Supabase Auth)
+======================================================== */
+function showLoginScreen(msg){
+  document.getElementById("loginScreen").style.display = "flex";
+  document.getElementById("app").style.display = "none";
+  const err = document.getElementById("loginError");
+  if(msg){ err.textContent = msg; err.style.display = "block"; }
+  else { err.style.display = "none"; }
+}
+function hideLoginScreen(){
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+}
+async function handleLogin(){
+  const email = document.getElementById("login_email").value.trim();
+  const password = document.getElementById("login_password").value;
+  if(!email || !password){ showLoginScreen("Email dan password wajib diisi"); return; }
+  const btn = document.getElementById("btnLogin");
+  btn.disabled = true; btn.textContent = "Memproses...";
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = "Masuk";
+  if(error){ showLoginScreen("Login gagal: email atau password salah"); return; }
+  await onLoginSuccess(data.user);
+}
+async function onLoginSuccess(user){
+  currentUser = user;
+  try{
+    const { data: profile } = await supabaseClient.from("profiles").select("name, role").eq("id", user.id).maybeSingle();
+    currentProfile = (profile && profile.name) ? profile : { name: user.email, role: "Viewer" };
+  }catch(e){
+    currentProfile = { name: user.email, role: "Viewer" };
+  }
+  hideLoginScreen();
+  await startApp();
+}
+function updateUserBadge(){
+  const el = document.getElementById("avatarBtn");
+  if(!el || !currentProfile) return;
+  el.textContent = (currentProfile.name||"?").trim().charAt(0).toUpperCase();
+}
+function openAccountModal(){
+  openModal("Akun Saya", `
+    <div class="form-row"><label>Nama</label><input value="${escapeHtml(currentProfile?.name||"-")}" disabled></div>
+    <div class="form-row"><label>Role</label><input value="${escapeHtml(currentProfile?.role||"-")}" disabled></div>
+    <div class="form-row"><label>Email</label><input value="${escapeHtml(currentUser?.email||"-")}" disabled></div>
+  `, null, `<button class="btn btn-danger" id="btnLogout">Logout</button>`);
+  document.getElementById("btnLogout").onclick = async ()=>{
+    await supabaseClient.auth.signOut();
+    closeModal();
+    currentUser = null; currentProfile = null;
+    showLoginScreen();
+  };
+}
+
+/* ========================================================
+   INIT
+======================================================== */
+async function startApp(){
   buildMenu();
   await loadDB();
   navigate("dashboard");
+  updateUserBadge();
+  const avatarBtn = document.getElementById("avatarBtn");
+  if(avatarBtn) avatarBtn.onclick = openAccountModal;
   document.getElementById("modalOverlay").addEventListener("click", (e)=>{
     if(e.target.id==="modalOverlay") closeModal();
   });
@@ -1183,6 +1246,26 @@ async function init(){
       await loadDB();
       render();
     }, 20000);
+  }
+}
+async function init(){
+  if(BACKEND_ENABLED && supabaseClient){
+    document.getElementById("btnLogin").onclick = handleLogin;
+    document.getElementById("login_password").addEventListener("keydown", (e)=>{ if(e.key==="Enter") handleLogin(); });
+    const { data } = await supabaseClient.auth.getSession();
+    if(data && data.session){
+      await onLoginSuccess(data.session.user);
+    } else {
+      showLoginScreen();
+    }
+    supabaseClient.auth.onAuthStateChange((event)=>{
+      if(event === "SIGNED_OUT"){ showLoginScreen(); }
+    });
+  } else {
+    // backend belum dikonfigurasi: skip login, langsung jalan mode lokal
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("app").style.display = "flex";
+    await startApp();
   }
 }
 init();
