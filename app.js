@@ -238,6 +238,15 @@ function navigate(route){
   document.getElementById("crumb").textContent = t[0];
   document.getElementById("pageTitle").textContent = t[1];
   render();
+  closeSidebarMobile();
+}
+function openSidebarMobile(){
+  document.getElementById("sidebar").classList.add("open");
+  document.getElementById("sidebarBackdrop").classList.add("show");
+}
+function closeSidebarMobile(){
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebarBackdrop").classList.remove("show");
 }
 
 /* ---------- helpers ---------- */
@@ -1236,6 +1245,10 @@ async function startApp(){
   });
   const btnRefresh = document.getElementById("btnRefresh");
   if(btnRefresh) btnRefresh.onclick = refreshFromBackend;
+  const btnHamburger = document.getElementById("btnHamburger");
+  if(btnHamburger) btnHamburger.onclick = openSidebarMobile;
+  const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+  if(sidebarBackdrop) sidebarBackdrop.onclick = closeSidebarMobile;
 
   if(BACKEND_ENABLED){
     // auto-sync ringan tiap 20 detik supaya perubahan dari user lain ikut tampil,
