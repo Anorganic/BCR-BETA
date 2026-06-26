@@ -1269,3 +1269,10 @@ async function init(){
   }
 }
 init();
+
+/* ---------- PWA: registrasi service worker ---------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((e) => console.error("SW register failed:", e));
+  });
+}
