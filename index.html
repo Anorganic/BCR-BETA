@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAINTENANCE BCR</title>
 <link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="app">
@@ -24,6 +25,10 @@
         <h1 id="pageTitle">Dashboard</h1>
       </div>
       <div class="spacer"></div>
+      <div class="sync-status" id="syncStatus" title="Status koneksi backend">
+        <span class="dot"></span><span class="txt">Memuat...</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btnRefresh" title="Ambil data terbaru">⟳ Refresh</button>
       <div class="searchbox"><input id="globalSearch" placeholder="Cari asset, WR, WO..."></div>
       <div class="avatar">A</div>
     </header>
