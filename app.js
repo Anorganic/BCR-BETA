@@ -114,7 +114,7 @@ async function loadDB(){
     try{
       const { data, error } = await supabaseClient.from("app_data").select("data").eq("id","main").maybeSingle();
       if(error) throw error;
-      if(data && data.data){ DB = data.data; setSyncStatus("online","Online (server)"); return; }
+      if(data && data.data && Object.keys(data.data).length > 0){ DB = data.data; setSyncStatus("online","Online (server)"); return; }
       DB = seedData();
       await saveDB();
       setSyncStatus("online","Online (server)");
