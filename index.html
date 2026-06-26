@@ -8,7 +8,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div id="app">
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">⚙</div>
+    <h1>MAINTENANCE BCR</h1>
+    <p class="login-sub">Asset &amp; Work Management</p>
+    <div class="form-row"><label>Email</label><input type="email" id="login_email" placeholder="nama@perusahaan.com" autocomplete="username"></div>
+    <div class="form-row"><label>Password</label><input type="password" id="login_password" placeholder="••••••••" autocomplete="current-password"></div>
+    <div id="loginError" class="login-error" style="display:none"></div>
+    <button class="btn btn-primary" id="btnLogin" style="width:100%">Masuk</button>
+    <div class="login-hint">Belum punya akun? Hubungi admin untuk dibuatkan akses.</div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
   <aside id="sidebar">
     <div class="brand">
       <div class="logo">⚙</div>
@@ -30,7 +43,7 @@
       </div>
       <button class="btn btn-secondary btn-sm" id="btnRefresh" title="Ambil data terbaru">⟳ Refresh</button>
       <div class="searchbox"><input id="globalSearch" placeholder="Cari asset, WR, WO..."></div>
-      <div class="avatar">A</div>
+      <div class="avatar" id="avatarBtn" title="Akun saya">A</div>
     </header>
     <main id="content"></main>
   </div>
