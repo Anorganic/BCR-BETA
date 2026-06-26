@@ -1,53 +1,41 @@
 -- =========================================================
--- MAINTENANCE BCR — Setup Login / User (Supabase Auth)
--- Jalankan SETELAH setup.sql, di Supabase SQL Editor > New query
+-- MAINTENANCE BCR — Setup Database (Supabase)
+-- Jalankan script ini di: Supabase Dashboard > SQL Editor > New query
 -- =========================================================
 
--- 1. Tabel profil user (nama tampilan & role)
-create table if not exists profiles (
-  id uuid references auth.users on delete cascade primary key,
-  name text,
-  role text default 'Viewer',  -- contoh role: Admin, Planner, Mekanik, Viewer
-  created_at timestamptz not null default now()
+-- 1. Tabel penyimpanan data aplikasi (pendekatan single-document)
+create table if not exists app_data (
+  id text primary key,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
 );
 
-alter table profiles enable row level security;
+-- 2. Baris awal kosong (akan otomatis diisi data contoh oleh web saat pertama dibuka)
+insert into app_data (id, data)
+values ('main', '{}'::jsonb)
+on conflict (id) do nothing;
 
-create policy "Profiles readable by authenticated users"
-  on profiles for select
-  using (auth.role() = 'authenticated');
+-- 3. Aktifkan Row Level Security
+alter table app_data enable row level security;
 
-create policy "Users can update their own profile"
-  on profiles for update
-  using (auth.uid() = id);
-
-create policy "Users can insert their own profile"
-  on profiles for insert
-  with check (auth.uid() = id);
-
--- 2. Perketat akses tabel app_data: HARUS login dulu (hapus policy lama yang terbuka untuk semua)
-drop policy if exists "Allow read for all" on app_data;
-drop policy if exists "Allow update for all" on app_data;
-drop policy if exists "Allow insert for all" on app_data;
-
-create policy "Authenticated read app_data"
+-- 4. Policy: izinkan baca & tulis untuk siapa saja yang membawa anon key
+--    (cocok untuk prototipe internal tanpa login. Untuk produksi yang lebih aman,
+--     tambahkan sistem login/auth dan ganti policy ini supaya dibatasi per-user/role.)
+create policy "Allow read for all"
   on app_data for select
-  using (auth.role() = 'authenticated');
+  using (true);
 
-create policy "Authenticated update app_data"
+create policy "Allow update for all"
   on app_data for update
-  using (auth.role() = 'authenticated');
+  using (true);
 
-create policy "Authenticated insert app_data"
+create policy "Allow insert for all"
   on app_data for insert
-  with check (auth.role() = 'authenticated');
+  with check (true);
 
 -- =========================================================
--- SELESAI. Cara bikin akun user baru:
--- 1. Supabase Dashboard > Authentication > Users > Add user
---    - Isi email & password, centang "Auto Confirm User"
--- 2. Buka Table Editor > tabel "profiles" > Insert row
---    - id   : copy User UID dari halaman Authentication > Users
---    - name : nama tampilan user tersebut
---    - role : Admin / Planner / Mekanik / Viewer (bebas, untuk label saja)
+-- SELESAI. Setelah ini:
+-- 1. Buka Settings > API di Supabase
+-- 2. Copy "Project URL" dan "anon public" key
+-- 3. Paste ke app.js (SUPABASE_URL & SUPABASE_ANON_KEY)
 -- =========================================================
