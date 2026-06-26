@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAINTENANCE BCR</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="logo">⚙</div>
+      <div class="name">MAINTENANCE BCR<small>ASSET &amp; WORK MANAGEMENT</small></div>
+    </div>
+    <nav class="menu" id="menu"></nav>
+    <div class="sidebar-foot">© 2026 MAINTENANCE BCR · v1.0</div>
+  </aside>
+
+  <div id="main">
+    <header id="topbar">
+      <div>
+        <div class="crumb" id="crumb">Dashboard</div>
+        <h1 id="pageTitle">Dashboard</h1>
+      </div>
+      <div class="spacer"></div>
+      <div class="searchbox"><input id="globalSearch" placeholder="Cari asset, WR, WO..."></div>
+      <div class="avatar">A</div>
+    </header>
+    <main id="content"></main>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBox"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
