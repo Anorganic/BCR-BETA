@@ -59,6 +59,47 @@ untuk langsung tarik data terbaru).
 > `app_data` untuk siapa saja yang punya link web-nya (tanpa login). Ini wajar
 > untuk prototipe/internal terbatas. Kalau nanti dipakai lebih luas, tambahkan
 > sistem login (Supabase Auth) dan perketat policy di `setup.sql`.
+>
+> 👉 Lihat bagian **"Setup Login / User"** di bawah — policy ini sudah
+> diperketat otomatis begitu kamu menjalankan `auth_setup.sql`.
+
+## Setup Login / User (Supabase Auth)
+
+Setelah backend Supabase aktif (bagian di atas), tambahkan sistem login supaya
+hanya user yang punya akun yang bisa membuka & mengubah data.
+
+1. Buka **SQL Editor → New query** di Supabase
+2. Copy semua isi file `auth_setup.sql`, paste, klik **Run**
+   - Ini akan membuat tabel `profiles` (nama & role tiap user) DAN
+     **mengganti** policy `app_data` supaya hanya bisa diakses user yang
+     sudah login (sebelumnya bisa diakses siapa saja yang punya link)
+3. Update file `index.html`, `style.css`, `app.js` di GitHub dengan versi
+   terbaru (commit seperti biasa) → Vercel redeploy otomatis
+
+### Membuat akun untuk tiap user
+
+Tidak ada halaman "daftar/signup" — admin (kamu) yang buat akun manual lewat
+Supabase, supaya tidak sembarang orang bisa daftar sendiri:
+
+1. Di Supabase, buka **Authentication → Users**
+2. Klik **Add user → Create new user**
+3. Isi **Email** dan **Password** untuk user tersebut, centang **Auto Confirm User**
+4. Klik **Create user**
+5. Copy **User UID** user yang baru dibuat (kolom UID di list user)
+6. Buka **Table Editor → profiles → Insert → Insert row**
+7. Isi:
+   - `id` → paste User UID dari langkah 5
+   - `name` → nama tampilan, misal "Andi Saputra"
+   - `role` → bebas, misal `Admin`, `Planner`, `Mekanik`, atau `Viewer` (saat ini hanya label, belum membatasi fitur per role)
+8. Klik **Save**
+
+Bagikan email + password itu ke user yang bersangkutan. Mereka tinggal buka
+web-nya dan login pakai email + password tersebut.
+
+### Cara user logout / cek akun
+
+Klik lingkaran avatar di pojok kanan atas topbar → muncul info nama, role,
+email, dan tombol **Logout**.
 
 ## Push ke GitHub
 
