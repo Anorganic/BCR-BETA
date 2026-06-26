@@ -52,8 +52,12 @@ function seedData(){
       {asset:"WL-01", type:"HM", value:3120, date:"2026-06-25 07:05", description:"Pencatatan HM rutin"},
       {asset:"DT-01", type:"KM", value:48211, date:"2026-06-25 07:10", description:"Pencatatan KM rutin"},
     ],
+    operatorReports:[
+      {id:"OPR-001", date:"2026-06-25", asset:"TM-01", operator:"Andi Saputra", shift:"Shift 1", meterType:"HM", meterValue:7644, fuel:35, activity:"Pengecoran area Plant Karawang", remarks:"Normal"},
+      {id:"OPR-002", date:"2026-06-25", asset:"DT-01", operator:"David", shift:"Shift 1", meterType:"KM", meterValue:48211, fuel:60, activity:"Angkut material area 2", remarks:"Normal"},
+    ],
     checksheets:[],
-    counters:{wr:5, wo:33, bl:3, mr:2, scd:3},
+    counters:{wr:5, wo:33, bl:3, mr:2, scd:3, opr:2, ast:0},
   };
 }
 
@@ -98,7 +102,7 @@ async function saveDB(){
   catch(e){ console.error("storage error", e); }
 }
 function nextId(prefix, padLen){
-  const map = {WR:"wr", WO:"wo", BL:"bl", MR:"mr", SCD:"scd"};
+  const map = {WR:"wr", WO:"wo", BL:"bl", MR:"mr", SCD:"scd", OPR:"opr", AST:"ast"};
   const key = map[prefix];
   DB.counters[key] = (DB.counters[key]||0)+1;
   return prefix+"-"+String(DB.counters[key]).padStart(padLen||3,"0");
@@ -196,6 +200,39 @@ function assetCategoryOf(nkp){
   const a = DB.assets.find(x=>x.nkp===nkp);
   return a ? a.category : "";
 }
+function confirmDelete(msg, cb){
+  if(window.confirm(msg)) cb();
+}
+function openPrintWindow(innerHtml, docTitle){
+  const win = window.open("", "_blank", "noopener");
+  if(!win){ showToast("Pop-up diblokir browser, izinkan pop-up untuk print"); return; }
+  win.document.write(`<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>${docTitle}</title>
+  <style>
+    *{box-sizing:border-box;}
+    body{font-family:Arial,Helvetica,sans-serif;color:#222;padding:34px;max-width:900px;margin:0 auto;}
+    .ph-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #d9772b;padding-bottom:10px;margin-bottom:14px;}
+    .ph-brand{font-weight:800;font-size:17px;}
+    .ph-meta{font-size:11px;color:#888;text-align:right;}
+    h1{font-size:19px;margin:6px 0 2px;letter-spacing:.5px;}
+    .ph-sub{font-size:12px;color:#666;margin-bottom:16px;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;}
+    td,th{border:1px solid #ccc;padding:7px 10px;font-size:12.3px;text-align:left;vertical-align:top;}
+    th{background:#f4f4f5;}
+    th.label{width:170px;background:#f4f4f5;}
+    .sign{display:flex;justify-content:space-between;margin-top:60px;}
+    .sign div{width:30%;text-align:center;font-size:12px;}
+    .sign .line{border-top:1px solid #333;margin-top:54px;padding-top:6px;}
+    @media print{ .no-print{display:none;} body{padding:14px;} }
+    .no-print{margin-top:24px;text-align:center;}
+    .no-print button{padding:9px 18px;border:none;background:#d9772b;color:#fff;border-radius:6px;font-size:13px;cursor:pointer;}
+  </style></head><body>
+  <div class="ph-head"><div class="ph-brand">⚙ MAINTENANCE BCR</div><div class="ph-meta">Dicetak: ${new Date().toLocaleString("id-ID")}</div></div>
+  ${innerHtml}
+  <div class="no-print"><button onclick="window.print()">🖨 Print / Save as PDF</button></div>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+}
 
 /* ---------- modal ---------- */
 function openModal(title, bodyHtml, onSubmit, footButtons){
@@ -215,6 +252,60 @@ function openModal(title, bodyHtml, onSubmit, footButtons){
 }
 function closeModal(){ document.getElementById("modalOverlay").classList.remove("show"); }
 
+/* ---------- printable documents ---------- */
+function printTechnicalReport(wrId){
+  const r = DB.workRequests.find(x=>x.id===wrId);
+  if(!r) return;
+  const html = `
+    <h1>TECHNICAL REPORT</h1>
+    <div class="ph-sub">Referensi Work Request: <b>${r.id}</b></div>
+    <table>
+      <tr><th class="label">Asset (NKP)</th><td>${r.asset}</td><th class="label">Category</th><td>${r.category}</td></tr>
+      <tr><th class="label">Location</th><td>${r.location}</td><th class="label">Register Date</th><td>${r.registerDate}</td></tr>
+      <tr><th class="label">Reported By</th><td>${r.user}</td><th class="label">Activity</th><td>${r.activity}</td></tr>
+      <tr><th class="label">Priority</th><td>${r.priority}</td><th class="label">Status</th><td>${r.approvalState} / ${r.state}</td></tr>
+    </table>
+    <table>
+      <tr><th class="label">Problem Description</th><td colspan="3">${escapeHtml(r.description)}</td></tr>
+      <tr><th class="label">Diagnose Report</th><td colspan="3">&nbsp;<br><br></td></tr>
+      <tr><th class="label">Action Taken</th><td colspan="3">&nbsp;<br><br></td></tr>
+      <tr><th class="label">Spare Part Used</th><td colspan="3">&nbsp;</td></tr>
+      <tr><th class="label">Mechanic Note</th><td colspan="3">&nbsp;</td></tr>
+    </table>
+    <div class="sign">
+      <div>Dilaporkan oleh<div class="line">${r.user}</div></div>
+      <div>Diperiksa oleh<div class="line">&nbsp;</div></div>
+      <div>Disetujui oleh<div class="line">&nbsp;</div></div>
+    </div>`;
+  openPrintWindow(html, "Technical Report - "+r.id);
+}
+function printWorkOrder(woId){
+  const w = DB.workOrders.find(x=>x.id===woId);
+  if(!w) return;
+  const a = DB.assets.find(x=>x.nkp===w.asset);
+  const html = `
+    <h1>WORK ORDER</h1>
+    <div class="ph-sub">No. WO: <b>${w.id}</b></div>
+    <table>
+      <tr><th class="label">Asset (NKP)</th><td>${w.asset}</td><th class="label">Category</th><td>${a?a.category:"-"}</td></tr>
+      <tr><th class="label">Location</th><td>${a?a.location:"-"}</td><th class="label">Sumber</th><td>${w.wrId&&w.wrId!=="-" ? "WR "+w.wrId : w.type}</td></tr>
+      <tr><th class="label">Type</th><td>${w.type}</td><th class="label">Created Date</th><td>${w.createdDate}</td></tr>
+      <tr><th class="label">Planner</th><td>${w.planner}</td><th class="label">Status</th><td>${w.status}</td></tr>
+    </table>
+    <table>
+      <thead><tr><th style="width:40px">No</th><th>Job Description / Checklist</th><th style="width:90px">Result</th><th style="width:160px">Note</th></tr></thead>
+      <tbody>
+        ${Array.from({length:6},(_,i)=>`<tr><td>${i+1}</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>`).join("")}
+      </tbody>
+    </table>
+    <div class="sign">
+      <div>Mekanik<div class="line">&nbsp;</div></div>
+      <div>Planning Site Manager<div class="line">&nbsp;</div></div>
+      <div>Disetujui oleh<div class="line">&nbsp;</div></div>
+    </div>`;
+  openPrintWindow(html, "Work Order - "+w.id);
+}
+
 /* ========================================================
    RENDER ROUTER
 ======================================================== */
@@ -225,7 +316,7 @@ function render(){
     case "wr": c.innerHTML = renderWR(); attachWR(); break;
     case "wo": c.innerHTML = renderWO(); attachWO(); break;
     case "backlog": c.innerHTML = renderBacklog(); attachBacklog(); break;
-    case "mr": c.innerHTML = renderMR(); break;
+    case "mr": c.innerHTML = renderMR(); attachMR(); break;
     case "records": c.innerHTML = renderRecords(); break;
     case "planning": c.innerHTML = renderPlanning(); attachPlanning(); break;
     case "wizard": c.innerHTML = renderWizard(); attachWizard(); break;
@@ -236,7 +327,7 @@ function render(){
     case "cs_periodical": c.innerHTML = renderChecksheet("periodical"); attachChecksheet("periodical"); break;
     case "rep_breakdown": c.innerHTML = renderReportBreakdown(); break;
     case "rep_technical": c.innerHTML = renderReportTechnical(); break;
-    case "rep_operator": c.innerHTML = renderReportOperator(); break;
+    case "rep_operator": c.innerHTML = renderReportOperator(); attachReportOperator(); break;
     case "rep_export": c.innerHTML = renderExport(); attachExport(); break;
     default: c.innerHTML = "<div class='empty-state'>Halaman tidak ditemukan</div>";
   }
@@ -310,6 +401,8 @@ function renderWR(){
         ${r.approvalState==="Requested" ? `<button class="btn btn-sm btn-secondary" data-wr-action="check" data-id="${r.id}">Check</button>` : ""}
         ${r.approvalState==="Checked" ? `<button class="btn btn-sm btn-success" data-wr-action="approve" data-id="${r.id}">Approve</button> <button class="btn btn-sm btn-danger" data-wr-action="decline" data-id="${r.id}">Decline</button>` : ""}
         ${r.approvalState==="Approved" && r.state!=="Closed" ? `<button class="btn btn-sm btn-navy" data-wr-action="createwo" data-id="${r.id}">Create WO</button>` : ""}
+        <button class="btn btn-sm btn-secondary" onclick="printTechnicalReport('${r.id}')">🖨 Print</button>
+        <button class="btn btn-sm btn-danger" data-wr-delete="${r.id}">Hapus</button>
       </td>
     </tr>`).join("") || `<tr class="empty-row"><td colspan="11">Belum ada Work Request</td></tr>`;
 
@@ -389,7 +482,16 @@ function attachWR(){
           <div class="form-row"><label>Priority</label><input value="${r.priority}" disabled></div>
         </div>
         <div class="form-row"><label>Deskripsi</label><textarea disabled>${escapeHtml(r.description)}</textarea></div>
-      `, null, '<span></span>');
+      `, null, `<button class="btn btn-secondary" onclick="printTechnicalReport('${r.id}')">🖨 Print Technical Report</button>`);
+    };
+  });
+  document.querySelectorAll("[data-wr-delete]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.wrDelete;
+      confirmDelete("Hapus Work Request "+id+"? Tindakan ini tidak bisa dibatalkan.", ()=>{
+        DB.workRequests = DB.workRequests.filter(x=>x.id!==id);
+        saveDB(); showToast("Work Request "+id+" dihapus"); render();
+      });
     };
   });
 }
@@ -407,12 +509,15 @@ function renderWO(){
         ${w.status==="Confirmed" ? `<button class="btn btn-sm btn-navy" data-wo-action="submit" data-id="${w.id}">Submit</button>` : ""}
         ${w.status==="Submitted" ? `<button class="btn btn-sm btn-success" data-wo-action="approve" data-id="${w.id}">Approve</button>` : ""}
         ${w.status==="Approved" ? `<button class="btn btn-sm btn-secondary" data-wo-action="close" data-id="${w.id}">Close WO</button>` : ""}
+        <button class="btn btn-sm btn-secondary" onclick="printWorkOrder('${w.id}')">🖨 Print</button>
+        <button class="btn btn-sm btn-danger" data-wo-delete="${w.id}">Hapus</button>
       </td>
-    </tr>`).join("") || `<tr class="empty-row"><td colspan="8">Belum ada Work Order. Buat melalui WR yang sudah Approved, atau dari Backlog / Schedule.</td></tr>`;
+    </tr>`).join("") || `<tr class="empty-row"><td colspan="8">Belum ada Work Order. Buat melalui WR yang sudah Approved, dari Backlog / Schedule, atau buat manual.</td></tr>`;
 
   return `
   <div class="page-header">
-    <div><h2>Work Order</h2><div class="desc">WO terbentuk dari WR (approved), Backlog, atau Maintenance Schedule.</div></div>
+    <div><h2>Work Order</h2><div class="desc">WO terbentuk dari WR (approved), Backlog, Maintenance Schedule, atau dibuat manual.</div></div>
+    <button class="btn btn-primary" id="btnNewWO">+ Buat Work Order</button>
   </div>
   <div class="tabbar">
     <div class="tab active">All</div><div class="tab">Ready to Confirm</div><div class="tab">Closed</div>
@@ -425,6 +530,20 @@ function renderWO(){
   </div>`;
 }
 function attachWO(){
+  document.getElementById("btnNewWO").onclick = ()=>{
+    openModal("Buat Work Order Manual", `
+      <div class="form-grid">
+        <div class="form-row"><label>Asset</label><select id="wo_asset">${DB.assets.map(a=>`<option value="${a.nkp}">${a.nkp} — ${a.category}</option>`).join("")}</select></div>
+        <div class="form-row"><label>Type</label><select id="wo_type"><option>Unscheduled</option><option>Scheduled</option><option>Backlog</option></select></div>
+        <div class="form-row"><label>Planner</label><input id="wo_planner" value="Planner Site"></div>
+      </div>
+    `, ()=>{
+      const code = "WO"+String(++DB.counters.wo).padStart(5,"0");
+      DB.workOrders.push({id:code, wrId:"-", asset:document.getElementById("wo_asset").value, planner:document.getElementById("wo_planner").value||"Planner Site",
+        status:"Draft", type:document.getElementById("wo_type").value, createdDate:new Date().toISOString().slice(0,10)});
+      saveDB(); closeModal(); showToast("Work Order "+code+" dibuat"); render();
+    });
+  };
   document.querySelectorAll("[data-wo-action]").forEach(btn=>{
     btn.onclick = ()=>{
       const w = DB.workOrders.find(x=>x.id===btn.dataset.id);
@@ -432,6 +551,15 @@ function attachWO(){
       const map = {confirm:"Confirmed", submit:"Submitted", approve:"Approved", close:"Closed"};
       w.status = map[action];
       saveDB(); showToast(w.id+" → "+w.status); render();
+    };
+  });
+  document.querySelectorAll("[data-wo-delete]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.woDelete;
+      confirmDelete("Hapus Work Order "+id+"?", ()=>{
+        DB.workOrders = DB.workOrders.filter(x=>x.id!==id);
+        saveDB(); showToast("Work Order "+id+" dihapus"); render();
+      });
     };
   });
 }
@@ -446,7 +574,10 @@ function renderBacklog(){
       <td>${escapeHtml(b.problem)}</td><td>${escapeHtml(b.action)}</td>
       <td>${b.partName} (${b.partNumber})</td><td>${b.qty} ${b.unit}</td>
       <td>${badge(b.status)}</td><td>${b.mechanic||"-"}</td>
-      <td>${b.status==="Open" ? `<button class="btn btn-sm btn-success" data-bl-close="${b.id}">Tutup &amp; Buat WO</button>` : "✓"}</td>
+      <td>
+        ${b.status==="Open" ? `<button class="btn btn-sm btn-success" data-bl-close="${b.id}">Tutup &amp; Buat WO</button>` : "✓"}
+        <button class="btn btn-sm btn-danger" data-bl-delete="${b.id}">Hapus</button>
+      </td>
     </tr>`).join("") || `<tr class="empty-row"><td colspan="11">Belum ada temuan backlog</td></tr>`;
 
   return `
@@ -500,17 +631,62 @@ function attachBacklog(){
       saveDB(); showToast("Backlog ditutup, WO "+code+" dibuat"); render();
     };
   });
+  document.querySelectorAll("[data-bl-delete]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.blDelete;
+      confirmDelete("Hapus backlog "+id+"?", ()=>{
+        DB.backlogs = DB.backlogs.filter(x=>x.id!==id);
+        saveDB(); showToast("Backlog "+id+" dihapus"); render();
+      });
+    };
+  });
 }
 
 /* ========================================================
    MATERIAL REQUEST & WORK RECORDS (simple read views)
 ======================================================== */
 function renderMR(){
-  const rows = DB.materialRequests.map(m=>`<tr><td>${m.id}</td><td>${m.woId}</td><td>${m.partName}</td><td>${m.qty} ${m.unit}</td><td>${badge(m.status)}</td></tr>`).join("")
-    || `<tr class="empty-row"><td colspan="5">Belum ada Material Request</td></tr>`;
+  const rows = DB.materialRequests.map(m=>`<tr><td>${m.id}</td><td>${m.woId}</td><td>${m.partName}</td><td>${m.qty} ${m.unit}</td><td>${badge(m.status)}</td>
+    <td><button class="btn btn-sm btn-danger" data-mr-delete="${m.id}">Hapus</button></td></tr>`).join("")
+    || `<tr class="empty-row"><td colspan="6">Belum ada Material Request</td></tr>`;
   return `
-  <div class="page-header"><div><h2>Material Request</h2><div class="desc">Permintaan sparepart yang terhubung dengan Work Order.</div></div></div>
-  <div class="table-wrap"><table><thead><tr><th>No</th><th>WO</th><th>Part</th><th>Qty</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  <div class="page-header">
+    <div><h2>Material Request</h2><div class="desc">Permintaan sparepart yang terhubung dengan Work Order.</div></div>
+    <button class="btn btn-primary" id="btnNewMR">+ Buat Material Request</button>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>No</th><th>WO</th><th>Part</th><th>Qty</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function attachMR(){
+  document.getElementById("btnNewMR").onclick = ()=>{
+    const woOpts = DB.workOrders.map(w=>`<option value="${w.id}">${w.id}</option>`).join("") || "<option>-</option>";
+    openModal("Buat Material Request", `
+      <div class="form-grid">
+        <div class="form-row"><label>Work Order</label><select id="mr_wo">${woOpts}</select></div>
+        <div class="form-row"><label>Status</label><select id="mr_status"><option>Requested</option><option>Issued</option></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Part Name</label><input id="mr_part" placeholder="Nama sparepart"></div>
+        <div class="form-row"><label>Qty</label><input type="number" id="mr_qty" value="1"></div>
+        <div class="form-row"><label>Unit</label><input id="mr_unit" value="pcs"></div>
+      </div>
+    `, ()=>{
+      const part = document.getElementById("mr_part").value.trim();
+      if(!part){ showToast("Nama part wajib diisi"); return; }
+      const id = nextId("MR",3);
+      DB.materialRequests.push({id, woId:document.getElementById("mr_wo").value, partName:part,
+        qty:Number(document.getElementById("mr_qty").value||1), unit:document.getElementById("mr_unit").value, status:document.getElementById("mr_status").value});
+      saveDB(); closeModal(); showToast("Material Request "+id+" dibuat"); render();
+    });
+  };
+  document.querySelectorAll("[data-mr-delete]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.mrDelete;
+      confirmDelete("Hapus Material Request "+id+"?", ()=>{
+        DB.materialRequests = DB.materialRequests.filter(x=>x.id!==id);
+        saveDB(); showToast("Material Request "+id+" dihapus"); render();
+      });
+    };
+  });
 }
 function renderRecords(){
   const closedWO = DB.workOrders.filter(w=>w.status==="Closed");
@@ -527,7 +703,10 @@ function renderRecords(){
 function renderPlanning(){
   const rows = DB.schedules.map(s=>`
     <tr><td>${s.id}</td><td>${s.asset}</td><td>${s.category}</td><td>${escapeHtml(s.activity)}</td><td>${s.interval}</td><td>${s.nextDate}</td><td>${badge(s.status)}</td>
-    <td>${s.status==="Scheduled" ? `<button class="btn btn-sm btn-navy" data-gen="${s.id}">Generate WO</button>` : "—"}</td></tr>`).join("")
+    <td>
+      ${s.status==="Scheduled" ? `<button class="btn btn-sm btn-navy" data-gen="${s.id}">Generate WO</button>` : "—"}
+      <button class="btn btn-sm btn-danger" data-scd-delete="${s.id}">Hapus</button>
+    </td></tr>`).join("")
     || `<tr class="empty-row"><td colspan="8">Belum ada rencana maintenance</td></tr>`;
   return `
   <div class="page-header">
@@ -548,6 +727,15 @@ function attachPlanning(){
       DB.workOrders.push({id:code, wrId:"-", asset:s.asset, planner:"Planner Site", status:"Draft", type:"Scheduled", createdDate:new Date().toISOString().slice(0,10)});
       showToast("WO "+code+" digenerate dari schedule "+s.id);
       saveDB(); render();
+    };
+  });
+  document.querySelectorAll("[data-scd-delete]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.scdDelete;
+      confirmDelete("Hapus rencana "+id+"?", ()=>{
+        DB.schedules = DB.schedules.filter(x=>x.id!==id);
+        saveDB(); showToast("Rencana "+id+" dihapus"); render();
+      });
     };
   });
 }
@@ -581,15 +769,46 @@ function attachWizard(){
    ASSETS
 ======================================================== */
 function renderAssetList(){
-  const rows = DB.assets.map(a=>`<tr><td><b>${a.nkp}</b></td><td>${a.category}</td><td>${a.location}</td><td>${badge(a.status)}</td></tr>`).join("");
+  const rows = DB.assets.map(a=>`<tr><td><b>${a.nkp}</b></td><td>${a.category}</td><td>${a.location}</td><td>${badge(a.status)}</td>
+    <td><button class="btn btn-sm btn-danger" data-asset-delete="${a.nkp}">Hapus</button></td></tr>`).join("");
   return `
-  <div class="page-header"><div><h2>Asset List</h2><div class="desc">Master data asset (sinkron dari sistem ERP setiap interval tertentu).</div></div></div>
-  <div class="table-wrap"><table><thead><tr><th>NKP</th><th>Category</th><th>Location</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  <div class="page-header">
+    <div><h2>Asset List</h2><div class="desc">Master data asset (sinkron dari sistem ERP setiap interval tertentu).</div></div>
+    <button class="btn btn-primary" id="btnNewAsset">+ Tambah Asset</button>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>NKP</th><th>Category</th><th>Location</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
-function attachAssetList(){}
+function attachAssetList(){
+  document.getElementById("btnNewAsset").onclick = ()=>{
+    const categories = Object.keys(CHECKLIST_ITEMS);
+    openModal("Tambah Asset", `
+      <div class="form-grid">
+        <div class="form-row"><label>NKP (Kode Asset)</label><input id="a_nkp" placeholder="contoh: GS-03"></div>
+        <div class="form-row"><label>Category</label><select id="a_cat">${categories.map(c=>`<option>${c}</option>`).join("")}</select></div>
+        <div class="form-row"><label>Location</label><input id="a_loc" placeholder="contoh: Plant Karawang"></div>
+        <div class="form-row"><label>Status</label><select id="a_status"><option>Active</option><option>Standby</option><option>Breakdown</option></select></div>
+      </div>
+    `, ()=>{
+      const nkp = document.getElementById("a_nkp").value.trim().toUpperCase();
+      if(!nkp){ showToast("NKP wajib diisi"); return; }
+      if(DB.assets.find(x=>x.nkp===nkp)){ showToast("NKP sudah terdaftar"); return; }
+      DB.assets.push({nkp, category:document.getElementById("a_cat").value, location:document.getElementById("a_loc").value||"-", status:document.getElementById("a_status").value});
+      saveDB(); closeModal(); showToast("Asset "+nkp+" ditambahkan"); render();
+    });
+  };
+  document.querySelectorAll("[data-asset-delete]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const nkp = btn.dataset.assetDelete;
+      confirmDelete("Hapus asset "+nkp+"? Data terkait (WR/WO/Backlog) tidak otomatis terhapus.", ()=>{
+        DB.assets = DB.assets.filter(x=>x.nkp!==nkp);
+        saveDB(); showToast("Asset "+nkp+" dihapus"); render();
+      });
+    };
+  });
+}
 
 function renderMeter(){
-  const rows = DB.meterRecords.map((m,i)=>`<tr><td>${m.asset}</td><td>${m.type}</td><td>${fmtNum(m.value)}</td><td>${m.date}</td><td>${escapeHtml(m.description)}</td><td><button class="btn btn-sm btn-secondary" data-edit-meter="${i}">Edit</button></td></tr>`).join("")
+  const rows = DB.meterRecords.map((m,i)=>`<tr><td>${m.asset}</td><td>${m.type}</td><td>${fmtNum(m.value)}</td><td>${m.date}</td><td>${escapeHtml(m.description)}</td><td><button class="btn btn-sm btn-secondary" data-edit-meter="${i}">Edit</button> <button class="btn btn-sm btn-danger" data-del-meter="${i}">Hapus</button></td></tr>`).join("")
     || `<tr class="empty-row"><td colspan="6">Belum ada record</td></tr>`;
   return `
   <div class="page-header">
@@ -624,6 +843,15 @@ function attachMeter(){
       `, ()=>{
         m.value = Number(document.getElementById("em_value").value||m.value);
         saveDB(); closeModal(); showToast("Meter record diperbarui"); render();
+      });
+    };
+  });
+  document.querySelectorAll("[data-del-meter]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const idx = Number(btn.dataset.delMeter);
+      confirmDelete("Hapus meter record ini?", ()=>{
+        DB.meterRecords.splice(idx,1);
+        saveDB(); showToast("Meter record dihapus"); render();
       });
     };
   });
@@ -719,11 +947,21 @@ function attachChecksheet(kind){
 }
 function renderCsHistory(kind){
   const list = DB.checksheets.filter(c=>c.kind===kind).slice(-6).reverse();
-  const rows = list.map(c=>`<tr><td>${c.id.replace("CS-","")}</td><td>${c.category}</td><td>${c.asset}</td><td>${c.date}</td><td>${badge("Closed")}</td></tr>`).join("")
-    || `<tr class="empty-row"><td colspan="5">Belum ada riwayat checksheet</td></tr>`;
+  const rows = list.map(c=>`<tr><td>${c.id.replace("CS-","")}</td><td>${c.category}</td><td>${c.asset}</td><td>${c.date}</td><td>${badge("Closed")}</td>
+    <td><button class="btn btn-sm btn-danger" data-cs-delete="${c.id}">Hapus</button></td></tr>`).join("")
+    || `<tr class="empty-row"><td colspan="6">Belum ada riwayat checksheet</td></tr>`;
   document.getElementById("csHistory").innerHTML = `
     <div class="panel"><h3>Riwayat Checksheet Terakhir</h3>
-    <table><thead><tr><th>Timestamp</th><th>Category</th><th>Asset</th><th>Date</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <table><thead><tr><th>Timestamp</th><th>Category</th><th>Asset</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  document.querySelectorAll("[data-cs-delete]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.csDelete;
+      confirmDelete("Hapus riwayat checksheet ini?", ()=>{
+        DB.checksheets = DB.checksheets.filter(x=>x.id!==id);
+        saveDB(); showToast("Riwayat checksheet dihapus"); renderCsHistory(kind);
+      });
+    };
+  });
 }
 
 /* ========================================================
@@ -743,10 +981,80 @@ function renderReportTechnical(){
     `<thead><tr><th>Tanggal</th><th>NKP</th><th>HM/KM</th><th>Problem</th><th>Action</th><th>Mechanic</th></tr></thead><tbody>${rows}</tbody>`,"technical");
 }
 function renderReportOperator(){
-  const rows = DB.meterRecords.map(m=>`<tr><td>${m.date.slice(0,10)}</td><td>${m.asset}</td><td>${assetCategoryOf(m.asset)}</td><td>${m.type}</td><td>${fmtNum(m.value)}</td><td>${escapeHtml(m.description)}</td></tr>`).join("")
-    || `<tr class="empty-row"><td colspan="6">Belum ada laporan harian alat</td></tr>`;
-  return reportShell("Daily Report Alat & Operator","Laporan harian penggunaan alat oleh operator (HM/KM &amp; catatan).",
-    `<thead><tr><th>Tanggal</th><th>Asset</th><th>Category</th><th>Meter</th><th>Value</th><th>Catatan</th></tr></thead><tbody>${rows}</tbody>`,"operator");
+  const rows = DB.operatorReports.map(o=>`
+    <tr><td>${o.date}</td><td>${o.asset}</td><td>${assetCategoryOf(o.asset)}</td><td>${o.operator}</td><td>${o.shift}</td>
+    <td>${o.meterType} ${fmtNum(o.meterValue)}</td><td>${fmtNum(o.fuel)} L</td><td>${escapeHtml(o.activity)}</td><td>${escapeHtml(o.remarks)}</td>
+    <td>
+      <button class="btn btn-sm btn-secondary" onclick="printOperatorReport('${o.id}')">🖨 Print</button>
+      <button class="btn btn-sm btn-danger" data-opr-delete="${o.id}">Hapus</button>
+    </td></tr>`).join("")
+    || `<tr class="empty-row"><td colspan="10">Belum ada laporan harian alat &amp; operator</td></tr>`;
+  return `
+  <div class="page-header">
+    <div><h2>Daily Report Alat &amp; Operator</h2><div class="desc">Laporan harian penggunaan alat oleh operator (HM/KM, BBM, aktivitas).</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="printOperatorReport()">🖨 Print Semua</button>
+      <button class="btn btn-primary" id="btnNewOpr">+ Buat Laporan</button>
+    </div>
+  </div>
+  <div class="table-wrap"><table id="reportTable_operator">
+    <thead><tr><th>Tanggal</th><th>Asset</th><th>Category</th><th>Operator</th><th>Shift</th><th>Meter</th><th>BBM</th><th>Aktivitas</th><th>Catatan</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+function attachReportOperator(){
+  document.getElementById("btnNewOpr").onclick = ()=>{
+    openModal("Buat Laporan Harian Alat &amp; Operator", `
+      <div class="form-grid">
+        <div class="form-row"><label>Tanggal</label><input type="date" id="o_date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="form-row"><label>Asset</label><select id="o_asset">${DB.assets.map(a=>`<option value="${a.nkp}">${a.nkp} — ${a.category}</option>`).join("")}</select></div>
+        <div class="form-row"><label>Operator</label><input id="o_operator" placeholder="Nama operator"></div>
+        <div class="form-row"><label>Shift</label><select id="o_shift"><option>Shift 1</option><option>Shift 2</option><option>Shift 3</option></select></div>
+        <div class="form-row"><label>Meter Type</label><select id="o_metertype"><option>HM</option><option>KM</option></select></div>
+        <div class="form-row"><label>Meter Value</label><input type="number" id="o_meterval" placeholder="0"></div>
+        <div class="form-row"><label>BBM (Liter)</label><input type="number" id="o_fuel" placeholder="0"></div>
+      </div>
+      <div class="form-row"><label>Aktivitas</label><textarea id="o_activity" placeholder="Deskripsikan aktivitas alat hari ini..."></textarea></div>
+      <div class="form-row"><label>Catatan</label><input id="o_remarks" placeholder="Normal / ada kendala, dsb"></div>
+    `, ()=>{
+      const operator = document.getElementById("o_operator").value.trim();
+      if(!operator){ showToast("Nama operator wajib diisi"); return; }
+      const id = nextId("OPR",3);
+      DB.operatorReports.push({
+        id, date:document.getElementById("o_date").value, asset:document.getElementById("o_asset").value,
+        operator, shift:document.getElementById("o_shift").value, meterType:document.getElementById("o_metertype").value,
+        meterValue:Number(document.getElementById("o_meterval").value||0), fuel:Number(document.getElementById("o_fuel").value||0),
+        activity:document.getElementById("o_activity").value, remarks:document.getElementById("o_remarks").value
+      });
+      saveDB(); closeModal(); showToast("Laporan "+id+" disimpan"); render();
+    });
+  };
+  document.querySelectorAll("[data-opr-delete]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.oprDelete;
+      confirmDelete("Hapus laporan "+id+"?", ()=>{
+        DB.operatorReports = DB.operatorReports.filter(x=>x.id!==id);
+        saveDB(); showToast("Laporan "+id+" dihapus"); render();
+      });
+    };
+  });
+}
+function printOperatorReport(oprId){
+  const list = oprId ? DB.operatorReports.filter(o=>o.id===oprId) : DB.operatorReports;
+  const rowsHtml = list.map(o=>`<tr><td>${o.date}</td><td>${o.asset}</td><td>${assetCategoryOf(o.asset)}</td><td>${o.operator}</td><td>${o.shift}</td><td>${o.meterType} ${fmtNum(o.meterValue)}</td><td>${fmtNum(o.fuel)} L</td><td>${escapeHtml(o.activity)}</td><td>${escapeHtml(o.remarks)}</td></tr>`).join("");
+  const html = `
+    <h1>LAPORAN HARIAN ALAT &amp; OPERATOR</h1>
+    <div class="ph-sub">${oprId ? "No. Laporan: "+oprId : "Rekap seluruh laporan — "+new Date().toLocaleDateString("id-ID")}</div>
+    <table>
+      <thead><tr><th>Tanggal</th><th>Asset</th><th>Category</th><th>Operator</th><th>Shift</th><th>Meter</th><th>BBM</th><th>Aktivitas</th><th>Catatan</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div class="sign">
+      <div>Operator<div class="line">&nbsp;</div></div>
+      <div>Diperiksa oleh<div class="line">&nbsp;</div></div>
+      <div>Disetujui oleh<div class="line">&nbsp;</div></div>
+    </div>`;
+  openPrintWindow(html, "Daily Report Alat & Operator");
 }
 function reportShell(title, desc, tableInner, key){
   return `
@@ -761,7 +1069,7 @@ function renderExport(){
   <div class="page-header"><div><h2>Export Custom Report</h2><div class="desc">Pilih dataset dan rentang untuk diekspor ke CSV/Excel.</div></div></div>
   <div class="panel" style="max-width:520px">
     <div class="form-row"><label>Dataset</label>
-      <select id="ex_dataset"><option value="workRequests">Work Request</option><option value="workOrders">Work Order</option><option value="backlogs">Backlog</option><option value="meterRecords">Meter Records</option><option value="assets">Asset List</option></select>
+      <select id="ex_dataset"><option value="workRequests">Work Request</option><option value="workOrders">Work Order</option><option value="backlogs">Backlog</option><option value="materialRequests">Material Request</option><option value="schedules">Maintenance Schedule</option><option value="meterRecords">Meter Records</option><option value="operatorReports">Daily Report Alat & Operator</option><option value="assets">Asset List</option></select>
     </div>
     <button class="btn btn-primary" id="btnExportNow">⬇ Export ke CSV</button>
   </div>`;
